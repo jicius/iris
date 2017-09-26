@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+#   -*- coding: UTF-8-8 -*-
+#
+#   Copyright (C) 2017 Jicius
+# 
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+# 
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+# 
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import requests
+
+
+headers = {
+    "accept": "application/json, text/javascript, */*; q=0.01",
+    "accept-encoding": "gzip, deflate, br",
+    "accept-language": "en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4",
+    "content-length": "20",
+    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "cookie": "miid=1409810036030592681; thw=cn; UM_distinctid=15cceed690b524-0bbdd31174e504-30667509-1fa400-15cceed690c3f5; ali_ab=123.118.3.57.1498722174578.7; _tb_token_=f3eefea7b4336; v=0; uc3=sg2=VySnJzyVFpGTrCkHolM905pUokAQTTODz6BDoh9gq0s%3D&nk2=sGDZaLdfxK4%3D&id2=W87%2BD1%2FwjlIn&vt3=F8dBzWjE9OQyEKkNxZ8%3D&lg2=U%2BGCWk%2F75gdr5Q%3D%3D; existShop=MTUwNjMxNjI4Nw%3D%3D; uss=VT21VGV0U3LvMEtbN4a7vu4V5L1eszKH5R1urYjJ1eWgKTp3oWqq4%2FGX088%3D; lgc=%5Cu4F59%5Cu6656%5Cu4E4B%5Cu604B; tracknick=%5Cu4F59%5Cu6656%5Cu4E4B%5Cu604B; cookie2=3b3aed0bf650a5da07ef21a02f88def0; sg=%E6%81%8B30; mt=np=&ci=2_1; cookie1=WvKUCWEasnSbsSBVeXvf157KorfwxIp0SYEAHhl3YhE%3D; unb=873659003; skt=3fe04fec05ee1d8d; t=7e0eae1a45eca099a207d53032be5fe1; _cc_=URm48syIZQ%3D%3D; tg=0; _l_g_=Ug%3D%3D; _nk_=%5Cu4F59%5Cu6656%5Cu4E4B%5Cu604B; cookie17=W87%2BD1%2FwjlIn; cna=bfi/ET+c8joCAXt2D7xiTqib; uc1=cookie14=UoTcCfOidg2AVg%3D%3D&lng=zh_CN&cookie16=W5iHLLyFPlMGbLDwA%2BdvAGZqLg%3D%3D&existShop=true&cookie21=WqG3DMC9Fbxq&tag=8&cookie15=V32FPkk%2Fw0dUvg%3D%3D&pas=0; apush73ccb83f10c6ef00179183f534a9dee2=%7B%22ts%22%3A1506316815601%2C%22parentId%22%3A1506316304040%7D; isg=Aru7THSnZgorRFpPlyuQ9f5fSpnluM5l-90XK6140LrRDNruNeLSY5MKUJq5",
+    "origin": "https://upload.taobao.com",
+    "referer": "https://upload.taobao.com/auction/sell.jhtml?spm=a1z09.1.category.d48.552c5bccec0mN&mytmenu=wym",
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36",
+    "x-requested-with": "XMLHttpRequest"
+}
+
+url = "https://upload.taobao.com/auction/json/reload_cats.htm?customId=&fenxiaoProduct="
+
+
+data_str = "path=next&sid=16&pv="
+
+
+print requests.post(url, headers=headers, data=data_str).text

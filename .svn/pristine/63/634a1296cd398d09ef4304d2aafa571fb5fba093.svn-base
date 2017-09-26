@@ -1,0 +1,144 @@
+#!/usr/bin/env python
+#   -*- coding: UTF-8 -*-
+#
+#   Copyright (C) 2017 Jicius
+# 
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+# 
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+# 
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import json
+import time
+import logging
+
+import requests
+import arrow
+from selenium import webdriver
+
+
+username = u"余晖之恋"
+password = "842223779min.."
+
+default_page_load_timeout = 10
+
+login_url = "https://login.taobao.com/member/login.jhtml"
+reload_cats_url = "https://upload.taobao.com/auction/json/reload_cats.htm?customId=&fenxiaoProduct="
+
+headers = {
+    "accept": "application/json, text/javascript, */*; q=0.01",
+    "accept-encoding": "gzip, deflate, br",
+    "accept-language": "en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4",
+    "content-length": "17",
+    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "origin": "https://upload.taobao.com",
+    "referer": "https://upload.taobao.com/auction/sell.jhtml",
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36",
+    "x-requested-with": "XMLHttpRequest"
+}
+
+
+def login(username, password):
+    """ 淘宝页面登录"""
+    driver = webdriver.Firefox()
+    driver.set_page_load_timeout(default_page_load_timeout)
+    try:
+        driver.get(login_url)
+    except Exception as e:
+        logging.exception(msg=str(e))
+        driver.execute_script('window.stop()')
+
+    driver.find_element_by_id("J_Quick2Static").click()
+    time.sleep(1)
+    driver.find_element_by_id("TPL_username_1").send_keys(username)
+    time.sleep(0.5)
+    driver.find_element_by_id("TPL_password_1").send_keys(password)
+    time.sleep(0.5)
+    driver.find_element_by_id("J_SubmitStatic").click()
+    time.sleep(2)
+
+
+    cookie_raw = ""
+    try:
+        driver.find_elements_by_xpath("//a[@class='site-nav-login-info-nick ']/text()")
+        logging.warning(msg=u"登录成功 %s" % arrow.now())
+        cookie_raw = driver.get_cookies()
+    except Exception:
+        logging.exception(msg=u"登录失败 %s" % arrow.now())
+    finally:
+        time.sleep(5)
+        driver.quit()
+        return cookie_raw
+
+
+def cookie2str(cookie_raw):
+    """ cookie转换"""
+    cookies = ""
+    for ck in cookie_raw[1:]:
+        cookies = cookies + ck.get('name') + "=" + ck.get('value') + "; "
+    return cookies
+
+
+def get_cats(cookies, path="all", sid=""):
+    """ 获取类目"""
+    headers["cookie"] = cookies
+    formdata_str = "path=%s&sid=%s&pv=" % (path, sid)
+    print formdata_str
+    result = requests.post(reload_cats_url, headers=headers, data=formdata_str).text
+
+    return result
+
+
+
+if __name__ == '__main__':
+    # cookie_raw = login(username, password)
+
+    # cookies = cookie2str(cookie_raw)
+    cookies = "miid=1409810036030592681; thw=cn; UM_distinctid=15cceed690b524-0bbdd31174e504-30667509-1fa400-15cceed690c3f5; ali_ab=123.118.3.57.1498722174578.7; _tb_token_=5e55e307efe36; v=0; uc3=sg2=VySnJzyVFpGTrCkHolM905pUokAQTTODz6BDoh9gq0s%3D&nk2=sGDZaLdfxK4%3D&id2=W87%2BD1%2FwjlIn&vt3=F8dBzWjIBJQ7Kz0P2Sk%3D&lg2=VT5L2FSpMGV7TQ%3D%3D; existShop=MTUwNTk3Njc0OA%3D%3D; uss=W80gAw5FaqlQqtfSVEgn7B7Zmzm87eJUwAyfGDyHTM3mIFOlgDRKb9I5pkQ%3D; lgc=%5Cu4F59%5Cu6656%5Cu4E4B%5Cu604B; tracknick=%5Cu4F59%5Cu6656%5Cu4E4B%5Cu604B; cookie2=3d964896a8661085a3fe10611ab5d258; sg=%E6%81%8B30; cookie1=WvKUCWEasnSbsSBVeXvf157KorfwxIp0SYEAHhl3YhE%3D; unb=873659003; skt=9bbc8c7464d22ecf; t=7e0eae1a45eca099a207d53032be5fe1; _cc_=VT5L2FSpdA%3D%3D; tg=0; _l_g_=Ug%3D%3D; _nk_=%5Cu4F59%5Cu6656%5Cu4E4B%5Cu604B; cookie17=W87%2BD1%2FwjlIn; mt=ci=2_1; JSESSIONID=A0E47F7A6DBF9814997DC53CBFF9F4EC; uc1=cookie16=VFC%2FuZ9az08KUQ56dCrZDlbNdA%3D%3D&cookie21=UtASsssmeWzt&cookie15=UIHiLt3xD8xYTw%3D%3D&existShop=true&pas=0&cookie14=UoTcCiI6lcKdcg%3D%3D&tag=8&lng=zh_CN; isg=Avn5lMDyhCsleVhFgV3yzzAxCGMTruzP5QOVoRsu1iCPohk0Y1b9iGf6UpCv; cna=bfi/ET+c8joCAXt2D7xiTqib"
+
+    headers["cookie"] = cookies
+    cates_enjson = requests.post(reload_cats_url, headers=headers, data="path=all&sid=&pv=").text
+
+    cates_unjson = json.loads(cates_enjson)
+    cates_unjson = cates_unjson[0] if cates_unjson else dict()
+    items = cates_unjson.get("data")
+    for it in items:
+        its = it.get("data")
+        for tt in its:
+            name = tt.get("name")
+            sid = tt.get("sid")
+            print "--------" * 30
+            print name, sid, "\n\n\n"
+
+            cates_enjson = requests.post(reload_cats_url, headers=headers, data="path=next&sid=%s&pv=" % sid).text
+
+            cates_unjson = json.loads(cates_enjson)
+            cates_unjson = cates_unjson[0] if cates_unjson else dict()
+            items = cates_unjson.get("data")
+            for it in items:
+                its = it.get("data")
+                for tt in its:
+                    name = tt.get("name")
+                    sid = tt.get("sid")
+                    print "\t", name, sid
+
+                    submit_url = "https://upload.taobao.com/auction/container/publish.htm?catId=%s" % sid
+
+                    submit_text = requests.get(submit_url, headers=headers).text
+
+                    
+
+
+
+
+
+
+

@@ -1,0 +1,296 @@
+#!/usr/bin/env python
+#   -*- coding: utf-8 -*-
+#
+#   Copyright (C) 2017 Jicius
+# 
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+# 
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+# 
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import json
+import time
+import logging
+
+reload(sys)
+sys.setdefaultencoding("utf-8")
+
+import requests
+import arrow
+from selenium import webdriver
+
+
+username = u"余晖之恋"
+password = "842223779min.."
+
+default_page_load_timeout = 10
+
+login_url = "https://login.taobao.com/member/login.jhtml"
+reload_cats_url = "https://upload.taobao.com/auction/json/reload_cats.htm?customId=&fenxiaoProduct="
+
+headers = {
+    "accept": "application/json, text/javascript, */*; q=0.01",
+    "accept-encoding": "gzip, deflate, br",
+    "accept-language": "en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4",
+    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "origin": "https://upload.taobao.com",
+    "referer": "https://upload.taobao.com/auction/sell.jhtml",
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36",
+    "x-requested-with": "XMLHttpRequest"
+}
+
+
+def login(username, password):
+    """ 淘宝页面登录"""
+    driver = webdriver.Firefox()
+    driver.set_page_load_timeout(default_page_load_timeout)
+    try:
+        driver.get(login_url)
+    except Exception as e:
+        logging.exception(msg=str(e))
+        driver.execute_script('window.stop()')
+
+    driver.find_element_by_id("J_Quick2Static").click()
+    time.sleep(1)
+    driver.find_element_by_id("TPL_username_1").send_keys(username)
+    time.sleep(0.5)
+    driver.find_element_by_id("TPL_password_1").send_keys(password)
+    time.sleep(0.5)
+    driver.find_element_by_id("J_SubmitStatic").click()
+    time.sleep(2)
+
+
+    cookie_raw = ""
+    try:
+        driver.find_elements_by_xpath("//a[@class='site-nav-login-info-nick ']/text()")
+        logging.warning(msg=u"登录成功 %s" % arrow.now())
+        cookie_raw = driver.get_cookies()
+    except Exception:
+        logging.exception(msg=u"登录失败 %s" % arrow.now())
+    finally:
+        time.sleep(5)
+        driver.quit()
+        return cookie_raw
+
+
+def cookie2str(cookie_raw):
+    """ cookie转换"""
+    cookies = ""
+    for ck in cookie_raw[1:]:
+        cookies = cookies + ck.get('name') + "=" + ck.get('value') + "; "
+    return cookies
+
+
+def get_cats(cookies, path="all", sid=""):
+    """ 获取类目"""
+    headers["cookie"] = cookies
+    formdata_str = "path=%s&sid=%s&pv=" % (path, sid)
+    print formdata_str
+    result = requests.post(reload_cats_url, headers=headers, data=formdata_str).text
+
+    return result
+
+
+def get_attr(headers, sid):
+    submit_url = "https://upload.taobao.com/auction/container/publish.htm?catId=%s" % sid
+
+    try:
+        submit_text = requests.get(submit_url, headers=headers,
+                                   timeout=10).text
+    except Exception as e:
+        submit_text = ""
+
+    pattern = '{[\s]+\"id\": \"saleProps\",[\s]+\"comid\": \"saleProps\"[\s\S]*?{[\s]+\"id\": \"priceCombine\"'
+
+    result = re.search(pattern=pattern, string=submit_text)
+    if result:
+        filter_result = result.group()
+        pattern = '\"label\":[\s]?\"(.*?)\",'
+        items = re.findall(pattern=pattern, string=filter_result)
+        if items:
+            attr = ';'.join(items[:-1])
+        else:
+            attr = ""
+    else:
+        attr = ""
+
+    return attr
+
+
+
+if __name__ == '__main__':
+    import re
+
+    cookies = "miid=1409810036030592681; thw=cn; UM_distinctid=15cceed690b524-0bbdd31174e504-30667509-1fa400-15cceed690c3f5; ali_ab=123.118.3.57.1498722174578.7; _tb_token_=f3eefea7b4336; v=0; uc1=cookie14=UoTcCfOgKK%2Fquw%3D%3D&lng=zh_CN&cookie16=VFC%2FuZ9az08KUQ56dCrZDlbNdA%3D%3D&existShop=true&cookie21=V32FPkk%2Fgipm&tag=8&cookie15=U%2BGCWk%2F75gdr5Q%3D%3D&pas=0; uc3=sg2=VySnJzyVFpGTrCkHolM905pUokAQTTODz6BDoh9gq0s%3D&nk2=sGDZaLdfxK4%3D&id2=W87%2BD1%2FwjlIn&vt3=F8dBzWjE97otIce%2Fl%2Fs%3D&lg2=VFC%2FuZ9ayeYq2g%3D%3D; existShop=MTUwNjMzOTYxMw%3D%3D; uss=VT21VGV0U3LvMEtbN4a7vu4V5L1eszKH5R1urYjJ1eWgKTp3oWqq4%2FGX088%3D; lgc=%5Cu4F59%5Cu6656%5Cu4E4B%5Cu604B; tracknick=%5Cu4F59%5Cu6656%5Cu4E4B%5Cu604B; cookie2=3b3aed0bf650a5da07ef21a02f88def0; sg=%E6%81%8B30; mt=np=&ci=2_1; cookie1=WvKUCWEasnSbsSBVeXvf157KorfwxIp0SYEAHhl3YhE%3D; unb=873659003; skt=cef3800abc4cc9d9; t=7e0eae1a45eca099a207d53032be5fe1; _cc_=U%2BGCWk%2F7og%3D%3D; tg=0; _l_g_=Ug%3D%3D; _nk_=%5Cu4F59%5Cu6656%5Cu4E4B%5Cu604B; cookie17=W87%2BD1%2FwjlIn; isg=Alxc6_3-aafZdB0K7M4PqOUSLXzOfQGIsICQLjZdfscqgf0LXODXjhMxl9-C; cna=bfi/ET+c8joCAXt2D7xiTqib"
+
+    headers["cookie"] = cookies
+    cates_enjson = requests.post(reload_cats_url, headers=headers, data="path=all&sid=&pv=").text
+
+    cates_unjson = json.loads(cates_enjson)
+    cates_unjson = cates_unjson[0] if cates_unjson else dict()
+    items = cates_unjson.get("data")
+
+    c1, c2, c3, c4, c5, c6 = "", "", "", "", "", ""
+    s1, s2, s3, s4, s5, s6 = "", "", "", "", "", ""
+
+    attr = None
+
+    c1, s1 = "", ""
+
+    for it in items[9:-1]:  # 去掉游戏话费和其他项
+        c1 = it.get("name")
+        s1 = ""
+        its = it.get("data")
+        for tt in its:
+            c2, s2 = "", ""
+
+            name = tt.get("name")
+            sid = tt.get("sid")
+            leaf = tt.get("leaf")
+            c2 = name
+            s2 = sid
+
+            data_str = "path=next&sid=%s&pv=" % sid
+
+            result = requests.post(reload_cats_url, headers=headers, data=data_str).text
+
+            cates_unjson = json.loads(result)
+            cates_unjson = cates_unjson[0] if cates_unjson else dict()
+            if cates_unjson and u"类目" not in cates_unjson.get("pName"):
+                attr = get_attr(headers, s2)
+                print c1, ", ", s1, ", ", c2, ", ", s2, ", ", c3, ", ", s3, ", ", c4, ", ", s4, ", ", c5, ", ", s5, ", ", c6, ", ", s6, ", ", attr
+                items = []
+            else:
+                items = cates_unjson.get("data", [])
+
+            for it in items:
+                its = it.get("data")
+                for tt in its:
+                    c3, s3 = "", ""
+
+                    name = tt.get("name")
+
+                    sid = tt.get("sid")
+                    leaf = tt.get("leaf")
+                    c3 = name
+                    s3 = sid
+
+                    if leaf == 1:
+                        attr = get_attr(headers, s3)
+                        print c1, ", ", s1, ", ", c2, ", ", s2, ", ", c3, ", ", s3, ", ", c4, ", ", s4, ", ", c5, ", ", s5, ", ", c6, ", ", s6, ", ", attr
+                    else:
+
+                        data_str = "path=next&sid=%s&pv=" % sid
+
+                        result = requests.post(reload_cats_url, headers=headers, data=data_str).text
+
+                        cates_unjson = json.loads(result)
+                        cates_unjson = cates_unjson[0] if cates_unjson else dict()
+                        if cates_unjson and u"类目" not in cates_unjson.get("pName"):
+                            items = []
+                            attr = get_attr(headers, s3)
+                            print c1, ", ", s1, ", ", c2, ", ", s2, ", ", c3, ", ", s3, ", ", c4, ", ", s4, ", ", c5, ", ", s5, ", ", c6, ", ", s6, ", ", attr
+                        else:
+                            items = cates_unjson.get("data", [])
+
+                        for it in items:
+                            its = it.get("data")
+                            for tt in its:
+                                c4, s4 = "", ""
+
+                                name = tt.get("name")
+
+                                sid = tt.get("sid")
+                                leaf = tt.get("leaf")
+
+                                c4 = name
+                                s4 = sid
+
+                                if leaf == 1:
+                                    attr = get_attr(headers, s4)
+                                    print c1, ", ", s1, ", ", c2, ", ", s2, ", ", c3, ", ", s3, ", ", c4, ", ", s4, ", ", c5, ", ", s5, ", ", c6, ", ", s6, ", ", attr
+                                else:
+                                    data_str = "path=next&sid=%s&pv=" % sid
+
+                                    result = requests.post(reload_cats_url, headers=headers, data=data_str).text
+
+                                    cates_unjson = json.loads(result)
+                                    cates_unjson = cates_unjson[0] if cates_unjson else dict()
+                                    if cates_unjson and u"类目" not in cates_unjson.get("pName"):
+                                        items = []
+                                        attr = get_attr(headers, s4)
+                                        print c1, ", ", s1, ", ", c2, ", ", s2, ", ", c3, ", ", s3, ", ", c4, ", ", s4, ", ", c5, ", ", s5, ", ", c6, ", ", s6, ", ", attr
+                                    else:
+                                        items = cates_unjson.get("data", [])
+
+                                    for it in items:
+                                        its = it.get("data")
+                                        for tt in its:
+                                            c5, s5 = "", ""
+
+                                            name = tt.get("name")
+
+                                            sid = tt.get("sid")
+                                            leaf = tt.get("leaf")
+
+                                            c5 = name
+                                            s5 = sid
+
+                                            if leaf == 1:
+                                                attr = get_attr(headers, s5)
+                                                print c1, ", ", s1, ", ", c2, ", ", s2, ", ", c3, ", ", s3, ", ", c4, ", ", s4, ", ", c5, ", ", s5, ", ", c6, ", ", s6, ", ", attr
+                                            else:
+                                                data_str = "path=next&sid=%s&pv=" % sid
+
+                                                result = requests.post(reload_cats_url, headers=headers,
+                                                                       data=data_str).text
+
+                                                cates_unjson = json.loads(result)
+                                                cates_unjson = cates_unjson[0] if cates_unjson else dict()
+                                                if cates_unjson and u"类目" not in cates_unjson.get("pName"):
+                                                    items = []
+                                                    attr = get_attr(headers, s5)
+                                                    print c1, ", ", s1, ", ", c2, ", ", s2, ", ", c3, ", ", s3, ", ", c4, ", ", s4, ", ", c5, ", ", s5, ", ", c6, ", ", s6, ", ", attr
+                                                else:
+                                                    items = cates_unjson.get("data", [])
+
+                                                for it in items:
+                                                    its = it.get("data")
+                                                    for tt in its:
+                                                        c6, s6 = "", ""
+
+                                                        name = tt.get("name")
+
+                                                        sid = tt.get("sid")
+                                                        leaf = tt.get("leaf")
+
+                                                        c6 = name
+                                                        s6 = sid
+
+                                                        attr = get_attr(headers, s6)
+
+                                                        print c1, ", ", s1, ", ", c2, ", ", s2, ", ", c3, ", ", s3, ", ", c4, ", ", s4, ", ", c5, ", ", s5, ", ", c6, ", ", s6, ", ", attr
+
+        print "\n\n\n"
+
+
+
+
+
+
+
+
+
+
+
+
+
